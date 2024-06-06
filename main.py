@@ -50,9 +50,9 @@ def spawn_player(*players):# Tween character up into view, spawn their orbs and 
         for orb in player_group:
             if isinstance(orb, Orb) and orb.owner==player: orb.kill()
         player.rect.x = randint(64,WIDTH-64)
-        player.rect.y = HEIGHT+64
-        player.iframe=120
-        create_orbs(player,player.orb_data[0],player.orb_data[1],player.orb_data[2],player.orb_data[3])
+        player.rect.y = HEIGHT
+        player.mobile = False
+        player.spawn_frame = 64
 
 def create_orbs(owner,amt,li,weight,color):
     for i in range(amt):
@@ -80,6 +80,7 @@ class Player(pg.sprite.Sprite):
         self.keybinds = keybinds
         self.lives = lives
         self.iframe = 0
+        self.spawn_frame = 0
     def update(self):
         #Input
         keys = pg.key.get_pressed()
@@ -90,6 +91,14 @@ class Player(pg.sprite.Sprite):
         if self.mobile:
             self.rect.x += ((right-left)*4)/(self.shooting+1)
             self.rect.y += ((down-up)*4)/(self.shooting+1)
+        else:
+            if self.spawn_frame > 0: 
+                self.spawn_frame-=1
+                self.rect.y-=1
+            else:
+                self.iframe=120
+                create_orbs(self,self.orb_data[0],self.orb_data[1],self.orb_data[2],self.orb_data[3])
+                self.mobile = True
 
         self.centerx = self.image.get_width()/2
         self.hitbox = pg.Rect((self.rect.x+10,self.rect.y+18),(8,8))
@@ -101,7 +110,7 @@ class Player(pg.sprite.Sprite):
             "right":[20,21,22,23,24]
         }
         
-        if left and right: self.anim = "idle"#Get correct animation
+        if (left and right) or (self.mobile==False): self.anim = "idle"#Get correct animation
         elif left: self.anim = "left"
         elif right: self.anim = "right"
         else: self.anim = "idle"
@@ -210,7 +219,7 @@ class Orb(pg.sprite.Sprite):
 
         self.last_shot = pg.time.get_ticks()
         self.owner = owner
-        self.rect.x,self.rect.y = (owner.rect.x,owner.rect.y)
+        self.rect.x,self.rect.y = (owner.rect.x,owner.rect.y+20)
         self.weight = weight
     def update(self):
         self.rect.x+=((self.owner.rect.centerx-(self.rect.w/self.weight))+3-self.weight-self.rect.x+self.offx)/self.weight
