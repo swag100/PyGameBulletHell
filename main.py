@@ -49,6 +49,11 @@ def spawn_player(*players):# Tween character up into view, spawn their orbs and 
     for player in players:
         for orb in player_group:
             if isinstance(orb, Orb) and orb.owner==player: orb.kill()
+        player.lives-=1
+        print(player.lives+1)
+        if player.lives<=-1: 
+            player.kill()
+            continue
         player.rect.x = randint(64,WIDTH-64)
         player.rect.y = HEIGHT
         player.mobile = False
@@ -178,10 +183,8 @@ class Enemy(pg.sprite.Sprite):
                 if self.hitbox.colliderect(bullet.rect):
                     bullet.kill()
                     self.health-=1
+                    if self.health <=0: self.kill()
                     print(self.health)
-        
-        #Die
-        if self.health <=0: self.kill()
 
 class Bullet(pg.sprite.Sprite):
     def __init__(self,owner,type,x,y,alpha=256,dir=(0,-5),speed=3):
@@ -249,7 +252,7 @@ player_group.add(player,player2)
 
 spawn_player(player,player2)
 
-nazrin=Enemy("nazrin",500,100,2000,(16,8,28,60))
+nazrin=Enemy("nazrin",500,100,100,(16,8,28,60))
 enemy_group.add(nazrin)
 
 """Game loop"""
