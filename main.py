@@ -1,5 +1,6 @@
 import pygame as pg
-import math
+from math import degrees, atan2
+from random import randint
 
 """Declarations"""
 BACKGROUND = (127,127,127) 
@@ -43,6 +44,13 @@ def spritesheet(size, file_name, pos=(0, 0)):
         rect_y += len_y
         rect_x = 0
     return sprites
+
+def spawn_player(*players):
+    for player in players: # Tween character up into view, spawn their orbs and then let them move.
+        player.mobile = False
+        player.rect.x = randint(64,WIDTH-64)
+        player.rect.y = HEIGHT+100
+        
 
 def create_orbs(owner,amt,li,weight,color):
     for i in range(amt):
@@ -171,7 +179,7 @@ class Bullet(pg.sprite.Sprite):
         self.pos = (x, y)
         self.dir = dir
 
-        angle = math.degrees(math.atan2(-self.dir[1], self.dir[0]))
+        angle = degrees(atan2(-self.dir[1], self.dir[0]))
 
         self.image = pg.transform.rotate(self.image, angle)
 
@@ -221,7 +229,9 @@ player2 = Player("marisa",500,400,[pg.K_LEFT,pg.K_RIGHT,pg.K_UP,pg.K_DOWN,pg.K_R
 player_group.add(player2)
 create_orbs(player2, 2, [(35,0),(-35,0)], [4,4], [1,1])
 
-nazrin=Enemy("nazrin",500,100,500,(16,8,28,60))
+
+
+nazrin=Enemy("nazrin",500,100,2000,(16,8,28,60))
 enemy_group.add(nazrin)
 
 """Game loop"""
