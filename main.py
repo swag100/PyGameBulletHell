@@ -45,12 +45,14 @@ def spritesheet(size, file_name, pos=(0, 0)):
         rect_x = 0
     return sprites
 
-def spawn_player(*players):
-    for player in players: # Tween character up into view, spawn their orbs and then let them move.
-        player.mobile = False
-        player.rect.x = randint(64,WIDTH-64)
-        player.rect.y = HEIGHT+100
-        
+def spawn_player(orb_data, player):# Tween character up into view, spawn their orbs and then let them move.
+    player.mobile = False # Make it update instead of teleport right to the end destination.
+    player.rect.x = randint(64,WIDTH-64)
+    player.rect.y = HEIGHT+64
+    for i in range(128):
+        player.rect.y-=1
+    player.mobile = True
+    create_orbs(orb_data[0],orb_data[1],orb_data[2],orb_data[3],orb_data[4]) 
 
 def create_orbs(owner,amt,li,weight,color):
     for i in range(amt):
@@ -123,7 +125,7 @@ class Player(pg.sprite.Sprite):
         #Collision with Enemies, bullets
         for enemy in enemy_group:
             if self.hitbox.colliderect(enemy.hitbox): #Respawn function
-                print("Enemy hitbox")
+                spawn_player(orb_data, self)
         for bullet in bullet_group:
             if bullet.owner in enemy_group:
                 if self.hitbox.colliderect(bullet.rect):
@@ -223,13 +225,11 @@ bullet_group = pg.sprite.Group()
 
 player = Player("reimu",380,400)
 player_group.add(player)
-create_orbs(player, 2, [(35,0),(-35,0)], [4,4], [2,2])
+spawn_player([player, 2, [(35,0),(-35,0)], [4,4], [2,2]],player) # Make orb data a player attribute.
 
 player2 = Player("marisa",500,400,[pg.K_LEFT,pg.K_RIGHT,pg.K_UP,pg.K_DOWN,pg.K_RSHIFT,pg.K_RCTRL])
 player_group.add(player2)
-create_orbs(player2, 2, [(35,0),(-35,0)], [4,4], [1,1])
-
-
+spawn_player([player2, 2, [(35,0),(-35,0)], [4,4], [1,1]],player2)
 
 nazrin=Enemy("nazrin",500,100,2000,(16,8,28,60))
 enemy_group.add(nazrin)
