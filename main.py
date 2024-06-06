@@ -45,14 +45,18 @@ def spritesheet(size, file_name, pos=(0, 0)):
         rect_x = 0
     return sprites
 
-def spawn_player(orb_data, player):# Tween character up into view, spawn their orbs and then let them move.
-    player.mobile = False # Make it update instead of teleport right to the end destination.
-    player.rect.x = randint(64,WIDTH-64)
-    player.rect.y = HEIGHT+64
-    for i in range(128):
-        player.rect.y-=1
-    player.mobile = True
-    create_orbs(orb_data[0],orb_data[1],orb_data[2],orb_data[3],orb_data[4]) 
+def spawn_player(*players):# Tween character up into view, spawn their orbs and then let them move.
+    for player in players:
+        for orb in player_group:
+            if isinstance(orb, Orb) and orb.owner==player: orb.kill()
+        player.mobile = False # Make it update instead of teleport right to the end destination.
+        player.rect.x = randint(64,WIDTH-64)
+        player.rect.y = HEIGHT+64
+        for i in range(128):
+            player.rect.y-=1
+        player.mobile = True
+        player.iframe=120
+        create_orbs(player,player.orb_data[0],player.orb_data[1],player.orb_data[2],player.orb_data[3])
 
 def create_orbs(owner,amt,li,weight,color):
     for i in range(amt):
@@ -61,7 +65,7 @@ def create_orbs(owner,amt,li,weight,color):
 
 """Classes"""
 class Player(pg.sprite.Sprite):
-    def __init__(self,character,x,y,keybinds=[pg.K_a,pg.K_d,pg.K_w,pg.K_s,pg.K_j,pg.K_k]):
+    def __init__(self,character,x,y,lives,orb_data=[2, [(35,0),(-35,0)], [4,4], [2,2]],keybinds=[pg.K_a,pg.K_d,pg.K_w,pg.K_s,pg.K_j,pg.K_k]):
         pg.sprite.Sprite.__init__(self)
         self.character = character
         self.images = spritesheet((32,48), f'images/player/player_{character}.png')
@@ -76,7 +80,10 @@ class Player(pg.sprite.Sprite):
         self.focus = False
         self.mobile = True
 
+        self.orb_data = orb_data
         self.keybinds = keybinds
+        self.lives = lives
+        self.iframe = 0
     def update(self):
         #Input
         keys = pg.key.get_pressed()
@@ -105,10 +112,11 @@ class Player(pg.sprite.Sprite):
 
         self.frame = ((self.frame + (1/4)) % len(animations[self.anim]))
         self.image = self.images[int(self.frame)+(animations[self.anim][0]-1)]
+        self.image.set_alpha(255/((self.iframe>0)+1))
 
         #Focus
         for orb in player_group:
-            if isinstance(orb, Orb): # Change offx and offy of each orb.
+            if isinstance(orb, Orb) and orb.owner == self: # Change offx and offy of each orb.
                 if self.focus: 
                     orb.offx = orb.offx_og/2
                     orb.offy = -40
@@ -123,14 +131,17 @@ class Player(pg.sprite.Sprite):
             self.last_shot = time_now
 
         #Collision with Enemies, bullets
-        for enemy in enemy_group:
-            if self.hitbox.colliderect(enemy.hitbox): #Respawn function
-                spawn_player(orb_data, self)
-        for bullet in bullet_group:
-            if bullet.owner in enemy_group:
-                if self.hitbox.colliderect(bullet.rect):
-                    bullet.kill()
-                    print("Enemy bullet")
+        if self.iframe>0:
+            self.iframe-=1
+        else:
+            for enemy in enemy_group:
+                if self.hitbox.colliderect(enemy.hitbox): #Respawn function
+                    spawn_player(self)
+            for bullet in bullet_group:
+                if bullet.owner in enemy_group:
+                    if self.hitbox.colliderect(bullet.rect):
+                        bullet.kill()
+                        print("Enemy bullet")
 
 class Enemy(pg.sprite.Sprite):
     def __init__(self,character,x,y,health,hitbox = (0,0,16,16)):
@@ -223,13 +234,11 @@ enemy_group = pg.sprite.Group()
 player_group = pg.sprite.Group()
 bullet_group = pg.sprite.Group()
 
-player = Player("reimu",380,400)
-player_group.add(player)
-spawn_player([player, 2, [(35,0),(-35,0)], [4,4], [2,2]],player) # Make orb data a player attribute.
+player = Player("reimu",380,400,3)
+player2 = Player("marisa",500,400,3,[2, [(35,0),(-35,0)], [4,4], [2,2]],[pg.K_LEFT,pg.K_RIGHT,pg.K_UP,pg.K_DOWN,pg.K_RSHIFT,pg.K_RCTRL])
+player_group.add(player,player2)
 
-player2 = Player("marisa",500,400,[pg.K_LEFT,pg.K_RIGHT,pg.K_UP,pg.K_DOWN,pg.K_RSHIFT,pg.K_RCTRL])
-player_group.add(player2)
-spawn_player([player2, 2, [(35,0),(-35,0)], [4,4], [1,1]],player2)
+spawn_player(player,player2)
 
 nazrin=Enemy("nazrin",500,100,2000,(16,8,28,60))
 enemy_group.add(nazrin)
