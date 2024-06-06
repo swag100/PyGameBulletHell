@@ -117,7 +117,8 @@ class Player(pg.sprite.Sprite):
 
         self.frame = ((self.frame + (1/4)) % len(animations[self.anim]))
         self.image = self.images[int(self.frame)+(animations[self.anim][0]-1)]
-        self.image.set_alpha(255/((self.iframe>0)+1))
+
+        self.image.set_alpha(255/(((self.iframe>0)or(self.spawn_frame>0))+1))
 
         #Focus
         for orb in player_group:
@@ -129,7 +130,7 @@ class Player(pg.sprite.Sprite):
         
         #Shoot
         time_now = pg.time.get_ticks()
-        if self.shooting and time_now - self.last_shot > 70: #J shoot, K focus
+        if (not self.spawn_frame>0) and self.shooting and time_now - self.last_shot > 70: #J shoot, K focus
             bullet1 = Bullet(self,0,self.rect.centerx-12,self.rect.top,200)
             bullet2 = Bullet(self,0,self.rect.centerx+12,self.rect.top,200)
             bullet_group.add(bullet1,bullet2)
@@ -178,6 +179,9 @@ class Enemy(pg.sprite.Sprite):
                     bullet.kill()
                     self.health-=1
                     print(self.health)
+        
+        #Die
+        if self.health <=0: self.kill()
 
 class Bullet(pg.sprite.Sprite):
     def __init__(self,owner,type,x,y,alpha=256,dir=(0,-5),speed=3):
