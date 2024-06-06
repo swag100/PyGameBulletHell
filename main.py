@@ -20,7 +20,8 @@ def draw():
     bullet_group.draw(screen) # draw Bullets
     player_group.draw(screen) # draw Player
 
-    # pg.draw.rect(screen, (0,255,255), player.hitbox) # draw Hitbox (testing!)
+    for player in player_group:
+        if isinstance(player, Player) and player.focus: pg.draw.rect(screen, (0,255,255), player.hitbox) # draw Hitbox when focused
     #for enemy in enemy_group: pg.draw.rect(screen, (0,255,255), enemy.hitbox) # draw Enemy hitboxes (SUPER testing!)
     pg.display.flip() # Finally, flip display.
 
@@ -57,7 +58,7 @@ def spawn_player(*players):# Tween character up into view, spawn their orbs and 
         player.rect.x = randint(64,WIDTH-64)
         player.rect.y = HEIGHT
         player.mobile = False
-        player.spawn_frame = 64
+        player.spawn_frame = randint(64,128)
 
 def create_orbs(owner,amt,li,weight,color):
     for i in range(amt):
@@ -71,7 +72,7 @@ class Player(pg.sprite.Sprite):
         self.character = character
         self.images = spritesheet((32,48), f'images/player/player_{character}.png')
         self.image = self.images[0]
-        self.hitbox = pg.Rect((x,y),(8,8))
+        self.hitbox = pg.Rect((x,y),(6,6))
         self.rect = self.image.get_rect()
         self.rect.x,self.rect.y = x,y
 
@@ -94,8 +95,8 @@ class Player(pg.sprite.Sprite):
 
         #Movement
         if self.mobile:
-            self.rect.x += ((right-left)*4)/(self.shooting+1)
-            self.rect.y += ((down-up)*4)/(self.shooting+1)
+            self.rect.x += ((right-left)*4)/(self.focus+1)
+            self.rect.y += ((down-up)*4)/(self.focus+1)
         else:
             if self.spawn_frame > 0: 
                 self.spawn_frame-=1
@@ -106,7 +107,7 @@ class Player(pg.sprite.Sprite):
                 self.mobile = True
 
         self.centerx = self.image.get_width()/2
-        self.hitbox = pg.Rect((self.rect.x+10,self.rect.y+18),(8,8))
+        self.hitbox = pg.Rect((self.rect.x+13,self.rect.y+18),(6,6))
 
         #Animation
         animations={
@@ -248,11 +249,11 @@ bullet_group = pg.sprite.Group()
 
 player = Player("reimu",380,400,3)
 player2 = Player("marisa",500,400,3,[2, [(35,0),(-35,0)], [4,4], [1,1]],[pg.K_LEFT,pg.K_RIGHT,pg.K_UP,pg.K_DOWN,pg.K_RSHIFT,pg.K_RCTRL])
-player_group.add(player,player2)
 
+player_group.add(player,player2)
 spawn_player(player,player2)
 
-nazrin=Enemy("nazrin",500,100,100,(16,8,28,60))
+nazrin=Enemy("nazrin",500,100,2000,(16,8,28,60))
 enemy_group.add(nazrin)
 
 """Game loop"""
