@@ -49,12 +49,8 @@ def spawn_player(*players):# Tween character up into view, spawn their orbs and 
     for player in players:
         for orb in player_group:
             if isinstance(orb, Orb) and orb.owner==player: orb.kill()
-        player.mobile = False # Make it update instead of teleport right to the end destination.
         player.rect.x = randint(64,WIDTH-64)
         player.rect.y = HEIGHT+64
-        for i in range(128):
-            player.rect.y-=1
-        player.mobile = True
         player.iframe=120
         create_orbs(player,player.orb_data[0],player.orb_data[1],player.orb_data[2],player.orb_data[3])
 
@@ -131,7 +127,7 @@ class Player(pg.sprite.Sprite):
             self.last_shot = time_now
 
         #Collision with Enemies, bullets
-        if self.iframe>0:
+        if self.iframe>0 and self.mobile:
             self.iframe-=1
         else:
             for enemy in enemy_group:
@@ -235,7 +231,7 @@ player_group = pg.sprite.Group()
 bullet_group = pg.sprite.Group()
 
 player = Player("reimu",380,400,3)
-player2 = Player("marisa",500,400,3,[2, [(35,0),(-35,0)], [4,4], [2,2]],[pg.K_LEFT,pg.K_RIGHT,pg.K_UP,pg.K_DOWN,pg.K_RSHIFT,pg.K_RCTRL])
+player2 = Player("marisa",500,400,3,[2, [(35,0),(-35,0)], [4,4], [1,1]],[pg.K_LEFT,pg.K_RIGHT,pg.K_UP,pg.K_DOWN,pg.K_RSHIFT,pg.K_RCTRL])
 player_group.add(player,player2)
 
 spawn_player(player,player2)
