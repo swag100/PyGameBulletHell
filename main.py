@@ -46,6 +46,14 @@ def spritesheet(size, file_name, pos=(0, 0)):
         rect_x = 0
     return sprites
 
+def rot_center(image, angle):
+    orig_rect = image.get_rect()
+    rot_image = pg.transform.rotate(image, angle)
+    rot_rect = orig_rect.copy()
+    rot_rect.center = rot_image.get_rect().center
+    rot_image = rot_image.subsurface(rot_rect).copy()
+    return rot_image
+
 def spawn_player(*players):# Tween character up into view, spawn their orbs and then let them move.
     for player in players:
         for orb in player_group:
@@ -158,7 +166,7 @@ class Player(pg.sprite.Sprite):
 class Enemy(pg.sprite.Sprite):
     def __init__(self,character,x,y,health,hitbox = (0,0,16,16)):
         pg.sprite.Sprite.__init__(self)
-        self.images=spritesheet((64,80),f'images/{character}/main.png')
+        self.images=spritesheet((64,80),f'images/enemies/{character}/main.png')
         self.image = self.images[0]
         self.rect = self.image.get_rect()
         self.rect.x,self.rect.y=x,y
@@ -218,8 +226,10 @@ class Bullet(pg.sprite.Sprite):
 class Orb(pg.sprite.Sprite):
     def __init__(self,owner,offx,offy,weight,color=0):
         pg.sprite.Sprite.__init__(self)
-        images=spritesheet((16,16),'images/player/orb.png')
+        images=spritesheet((15,15),'images/player/orb.png')
         self.image = images[color]
+        self.image_og = self.image
+        self.angle = 90
         self.rect = self.image.get_rect()
 
         self.offx_og,self.offy_og=offx,offy
@@ -230,6 +240,13 @@ class Orb(pg.sprite.Sprite):
         self.rect.x,self.rect.y = (owner.rect.x,owner.rect.y+20)
         self.weight = weight
     def update(self):
+        #Rotate image, ISSUE: Not rotating by REAL center center.
+        self.angle-=(self.weight/4)%360
+        rot_image = rot_center(self.image_og, self.angle)
+        self.image = rot_image
+        #self.rect = rot_image[1]
+
+        #Follow owner
         self.rect.x+=((self.owner.rect.centerx-(self.rect.w/self.weight))-self.weight-self.rect.x+self.offx)/self.weight
         self.rect.y+=(self.owner.rect.centery-self.rect.y+self.offy)/self.weight
         
@@ -240,6 +257,12 @@ class Orb(pg.sprite.Sprite):
             bullet2 = Bullet(self.owner,1+self.owner.focus,self.rect.centerx+6,self.rect.top-6,150,((1-self.owner.focus)/7,-5))
             bullet_group.add(bullet1,bullet2)
             self.last_shot = time_now
+
+class Effect(pg.sprite.Sprite):
+    def __init__(self,owner,x,y,type):
+        pass
+    def update(self):
+        pass
 
 
 """Init"""
