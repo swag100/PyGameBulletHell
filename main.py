@@ -1,6 +1,6 @@
 import pygame as pg
 from math import degrees, atan2
-from random import randint
+from random import randint, uniform
 
 """Declarations"""
 BACKGROUND = (127,127,127) 
@@ -164,13 +164,13 @@ class Player(pg.sprite.Sprite):
         #Collision with Enemies, bullets
         if self.iframe>0 and self.mobile:
             self.iframe-=1
-        else:
+        elif not self.spawn_frame>0: # Can be hit
             for enemy in enemy_group:
                 if self.hitbox.colliderect(enemy.hitbox): #Respawn function
                     spawn_player(self)
             for bullet in bullet_group:
                 if bullet.owner in enemy_group:
-                    if self.hitbox.colliderect(bullet.rect):
+                    if self.hitbox.colliderect(bullet.image.get_rect()):
                         bullet.kill()
                         print("Enemy bullet")
 
@@ -180,24 +180,47 @@ class Enemy(pg.sprite.Sprite):
         self.images=spritesheet((64,80),f'images/enemies/{character}/main.png')
         self.image = self.images[0]
         self.rect = self.image.get_rect()
-        self.rect.x,self.rect.y=x,y
-        self.hitbox = pg.Rect(x+hitbox[0],y+hitbox[1],hitbox[2],hitbox[3],)
+        self.rect.x,self.rect.y=0,0
+        self.h0,self.h1,self.h2,self.h3=hitbox[0],hitbox[1],hitbox[2],hitbox[3]
+        self.hitbox = pg.Rect(x+self.h0,y+self.h1,self.h2,self.h3)
         
         self.anim = "idle" # Make enemy have an idle animation.
         self.frame = 0
         self.character = character
         self.health = health
+
+        self.followx,self.followy=x,y
+        self.floaty=0
+        self.floatdir=False
+        self.move_timer=256
+        self.last_shot = pg.time.get_ticks()
     def update(self):
         #Animation
         animations={
-            "idle":[1],
-            "special":[1,2,3,4,5,6,7,8,9,10,11,12]
+            "idle":([1,2,3,4], 1/12, 1/8),
+            "special":([1,2,3,4,5,6,7,8,9,10,11,12])
         }
 
-        self.frame = ((self.frame + (1/4)) % len(animations[self.anim]))
-        self.image = self.images[int(self.frame)+(animations[self.anim][0]-1)]
+        self.frame = ((self.frame + animations[self.anim][1]) % len(animations[self.anim][0]))
+        self.image = self.images[int(self.frame)+(animations[self.anim][0][0]-1)]
+
+        #Movement
+        xvel,yvel=(self.followx-self.rect.x)/10,((self.followy-self.rect.y)/10)+int(self.floaty)
+        self.rect.x+=xvel
+        self.rect.y+=yvel
+
+        self.floaty+=animations[self.anim][2]*(self.floatdir*2-1)
+        if self.floaty>3 or self.floaty<-3:
+            self.floatdir = not self.floatdir
+
+        if not self.move_timer>1: 
+            self.move_timer=randint(128,512)
+            self.followx,self.followy=randint(0,WIDTH-self.rect.w),randint(0,HEIGHT-self.rect.h-(HEIGHT/2))
+
+        else: self.move_timer-=1
 
         #collision!
+        self.hitbox = pg.Rect(self.rect.x+self.h0,self.rect.y+self.h1,self.h2,self.h3)
         for bullet in bullet_group:
             if bullet.owner in player_group:
                 if self.hitbox.colliderect(bullet.rect):
@@ -206,24 +229,36 @@ class Enemy(pg.sprite.Sprite):
                     if self.health <=0: self.kill()
                     print(self.health)
 
+        #Shooting!
+        time_now = pg.time.get_ticks()
+        if any(isinstance(player, Player) and not player.spawn_frame> 0 for player in player_group) and time_now - self.last_shot > 160:
+            for player in player_group:
+                if isinstance(player, Player):
+                    angle=(player.centerx-self.rect.centerx,player.rect.y-self.rect.y)#Distance
+                    bullet_group.add(Bullet(self,3,self.rect.centerx-5,self.rect.bottom,200,angle,1,True,48))
+            self.last_shot = time_now
+
 class Bullet(pg.sprite.Sprite):
-    def __init__(self,owner,type,x,y,alpha=256,dir=(0,-5),speed=3):
+    def __init__(self,owner,type,x,y,alpha=256,dir=(0,-1),speed=16,sheet=False,sheet_image=0):
         pg.sprite.Sprite.__init__(self)
 
         types=[
             ['images/bullets/player_bullet.png'], # 0: reimu bullet
             ['images/bullets/orb_bullet0.png'], # 1: unfocused orb bullet
             ['images/bullets/orb_bullet1.png'], # 2: focused orb bullet
+            ['images/bullets/bulletsheet.png',(16,16)], # 2: focused orb bullet
         ]
 
-        self.image = pg.image.load(types[type][0])
+        if sheet:
+            self.images = spritesheet(types[type][1],types[type][0]) 
+            self.image = self.images[sheet_image]
+        else: self.image = pg.image.load(types[type][0])
         self.image.set_alpha(alpha)
-        self.speed=speed
+        self.speed=speed = speed
         self.owner=owner
 
         self.pos = (x, y)
         self.dir = dir
-
         angle = degrees(atan2(-self.dir[1], self.dir[0]))
 
         self.image = pg.transform.rotate(self.image, angle)
@@ -233,6 +268,7 @@ class Bullet(pg.sprite.Sprite):
         self.rect = self.image.get_rect(center = self.pos)
         
         if self.rect.bottom < 0: self.kill()
+        if self.rect.top > HEIGHT: self.kill()
 
 class Orb(pg.sprite.Sprite):
     def __init__(self,owner,offx,offy,weight,color=0):
@@ -263,12 +299,12 @@ class Orb(pg.sprite.Sprite):
         #shoot
         time_now = pg.time.get_ticks()
         if self.owner.shooting and time_now - self.last_shot > (120-(self.owner.focus*30)): #J shoot, K focus
-            bullet1 = Bullet(self.owner,1+self.owner.focus,self.rect.centerx-6,self.rect.top-6,150,((-1+self.owner.focus)/7,-5))
-            bullet2 = Bullet(self.owner,1+self.owner.focus,self.rect.centerx+6,self.rect.top-6,150,((1-self.owner.focus)/7,-5))
+            bullet1 = Bullet(self.owner,1+self.owner.focus,self.rect.centerx-6,self.rect.top-6,150,((-1+self.owner.focus)/32,-1))
+            bullet2 = Bullet(self.owner,1+self.owner.focus,self.rect.centerx+6,self.rect.top-6,150,((1-self.owner.focus)/32,-1))
             bullet_group.add(bullet1,bullet2)
             self.last_shot = time_now
 
-class Effect(pg.sprite.Sprite):
+class Effect(pg.sprite.Sprite): #Make generic. Sorry
     def __init__(self,owner,type,x,y,size=(64,64)):
         pg.sprite.Sprite.__init__(self)
         self.images = spritesheet(size,f'images/effects/{type}.png')
@@ -302,7 +338,7 @@ player_group = pg.sprite.Group()
 bullet_group = pg.sprite.Group()
 
 player = Player("reimu",380,400,3)
-player2 = Player("marisa",500,400,3,[2, [(35,0),(-35,0)], [4,4], [1,1]],[pg.K_LEFT,pg.K_RIGHT,pg.K_UP,pg.K_DOWN,pg.K_RSHIFT,pg.K_RCTRL])
+player2 = Player("marisa",500,400,3,[2, [(35,0),(-35,0)], [4,4], [1,1]],[pg.K_LEFT,pg.K_RIGHT,pg.K_UP,pg.K_DOWN,pg.K_PERIOD,pg.K_SLASH])
 
 player_group.add(player,player2)
 spawn_player(player,player2)
