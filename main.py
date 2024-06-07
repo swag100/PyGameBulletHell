@@ -19,9 +19,10 @@ def draw():
     enemy_group.draw(screen) # draw Enemy
     bullet_group.draw(screen) # draw Bullets
     player_group.draw(screen) # draw Player
+    effect_group.draw(screen) # draw screen Effects
 
-    for player in player_group:
-        if isinstance(player, Player) and player.focus: pg.draw.rect(screen, (0,255,255), player.hitbox) # draw Hitbox when focused
+    #for player in player_group:
+    #    if isinstance(player, Player) and player.focus: pg.draw.rect(screen, (0,255,255), player.hitbox) # draw Hitbox when focused
     #for enemy in enemy_group: pg.draw.rect(screen, (0,255,255), enemy.hitbox) # draw Enemy hitboxes (SUPER testing!)
     pg.display.flip() # Finally, flip display.
 
@@ -29,6 +30,7 @@ def update():
     for enemy in enemy_group: enemy.update()
     for i in player_group: i.update()
     for bullet in bullet_group: bullet.update()
+    for effect in effect_group: effect.update()
 
 def spritesheet(size, file_name, pos=(0, 0)):
     len_x, len_y = size
@@ -58,8 +60,10 @@ def spawn_player(*players):# Tween character up into view, spawn their orbs and 
     for player in players:
         for orb in player_group:
             if isinstance(orb, Orb) and orb.owner==player: orb.kill()
+        for fx in effect_group:
+            if fx.owner == player: fx.kill()
         player.lives-=1
-        print(f"respawned-- {player.lives+1} lives left")
+        print(f"player spawned-- {player.lives+1} lives left")
         if player.lives<=-1: 
             player.kill()
             continue
@@ -138,9 +142,16 @@ class Player(pg.sprite.Sprite):
         for orb in player_group:
             if isinstance(orb, Orb) and orb.owner == self: # Change offx and offy of each orb.
                 if self.focus: 
+                    if not any(fx.type=="focus" and fx.owner==self for fx in effect_group):
+                        focus_effect=Effect(self,"focus",self.hitbox.x,self.hitbox.y)
+                        effect_group.add(focus_effect)
+
                     orb.offx = orb.offx_og/2
                     orb.offy = -40
-                else: orb.offx,orb.offy = orb.offx_og,orb.offy_og
+                else: 
+                    for fx in effect_group:
+                        if fx.owner == self: fx.kill()
+                    orb.offx,orb.offy = orb.offx_og,orb.offy_og
         
         #Shoot
         time_now = pg.time.get_ticks()
@@ -240,11 +251,10 @@ class Orb(pg.sprite.Sprite):
         self.rect.x,self.rect.y = (owner.rect.x,owner.rect.y+20)
         self.weight = weight
     def update(self):
-        #Rotate image, ISSUE: Not rotating by REAL center center.
+        #Rotate image
         self.angle-=(self.weight/4)%360
         rot_image = rot_center(self.image_og, self.angle)
         self.image = rot_image
-        #self.rect = rot_image[1]
 
         #Follow owner
         self.rect.x+=((self.owner.rect.centerx-(self.rect.w/self.weight))-self.weight-self.rect.x+self.offx)/self.weight
@@ -259,14 +269,35 @@ class Orb(pg.sprite.Sprite):
             self.last_shot = time_now
 
 class Effect(pg.sprite.Sprite):
-    def __init__(self,owner,x,y,type):
-        pass
+    def __init__(self,owner,type,x,y,size=(64,64)):
+        pg.sprite.Sprite.__init__(self)
+        self.images = spritesheet(size,f'images/effects/{type}.png')
+        self.image = self.images[0]
+        self.rect = self.image.get_rect()
+        self.rect.x,self.rect.y=x,y
+        self.owner = owner
+        self.type = type
+
+        if type=="focus": #I WAS LAZY. MAKE THIS BETTER LATER
+            self.image_og = self.image
+            self.angle = 90
+            self.spindir=randint(0,1)*2-1
+            self.spinspd=randint(1,32)/8
     def update(self):
-        pass
+        if self.type=="focus": #OUGHH SO LAZY
+            #Rotate image
+            self.angle+=(self.spinspd%360)*self.spindir
+            rot_image = rot_center(self.image_og, self.angle)
+            self.image = rot_image
+
+            #Follow owner
+            self.rect.x=self.owner.hitbox.x-(self.rect.w/2)+(self.owner.hitbox.w/2)
+            self.rect.y=self.owner.hitbox.y-(self.rect.h/2)+(self.owner.hitbox.h/2)
 
 
 """Init"""
 enemy_group = pg.sprite.Group()
+effect_group = pg.sprite.Group()
 player_group = pg.sprite.Group()
 bullet_group = pg.sprite.Group()
 
