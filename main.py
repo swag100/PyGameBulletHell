@@ -234,25 +234,21 @@ class Enemy(pg.sprite.Sprite):
         if any(isinstance(player, Player) and not player.spawn_frame> 0 for player in player_group) and time_now - self.last_shot > 160:
             for player in player_group:
                 if isinstance(player, Player):
-                    angle=(player.centerx-self.rect.centerx,player.rect.y-self.rect.y)#Distance
-                    bullet_group.add(Bullet(self,3,self.rect.centerx-5,self.rect.bottom,200,angle,1,True,48))
+                    #bullet_group.add(Bullet(self,3,self.rect.centerx-5,self.rect.bottom,200,distance,1,True,48))
+                    pass#Make enemy bullet class for testing. im so lazy.
             self.last_shot = time_now
 
 class Bullet(pg.sprite.Sprite):
-    def __init__(self,owner,type,x,y,alpha=256,dir=(0,-1),speed=16,sheet=False,sheet_image=0):
+    def __init__(self,owner,type,x,y,alpha=256,dir=(0,-1),speed=16):
         pg.sprite.Sprite.__init__(self)
 
         types=[
             ['images/bullets/player_bullet.png'], # 0: reimu bullet
             ['images/bullets/orb_bullet0.png'], # 1: unfocused orb bullet
             ['images/bullets/orb_bullet1.png'], # 2: focused orb bullet
-            ['images/bullets/bulletsheet.png',(16,16)], # 2: focused orb bullet
         ]
 
-        if sheet:
-            self.images = spritesheet(types[type][1],types[type][0]) 
-            self.image = self.images[sheet_image]
-        else: self.image = pg.image.load(types[type][0])
+        self.image = pg.image.load(types[type][0])
         self.image.set_alpha(alpha)
         self.speed=speed = speed
         self.owner=owner
