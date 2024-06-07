@@ -51,7 +51,7 @@ def spawn_player(*players):# Tween character up into view, spawn their orbs and 
         for orb in player_group:
             if isinstance(orb, Orb) and orb.owner==player: orb.kill()
         player.lives-=1
-        print(player.lives+1)
+        print(f"respawned-- {player.lives+1} lives left")
         if player.lives<=-1: 
             player.kill()
             continue
@@ -230,7 +230,7 @@ class Orb(pg.sprite.Sprite):
         self.rect.x,self.rect.y = (owner.rect.x,owner.rect.y+20)
         self.weight = weight
     def update(self):
-        self.rect.x+=((self.owner.rect.centerx-(self.rect.w/self.weight))+3-self.weight-self.rect.x+self.offx)/self.weight
+        self.rect.x+=((self.owner.rect.centerx-(self.rect.w/self.weight))-self.weight-self.rect.x+self.offx)/self.weight
         self.rect.y+=(self.owner.rect.centery-self.rect.y+self.offy)/self.weight
         
         #shoot
