@@ -3,19 +3,23 @@ from math import degrees, atan2
 from random import randint, uniform
 
 """Declarations"""
-BACKGROUND = (127,127,127) 
+background = pg.Rect((32,16),(384,448)) 
 
-WIDTH, HEIGHT = (800, 500)
+WINDOW_W, WINDOW_H = (640, 480)
+GAME_W, GAME_H, GAME_X, GAME_Y = (384, 448, 32, 16)
 
 FPS = 60
 
 clock = pg.time.Clock()
-screen = pg.display.set_mode((WIDTH, HEIGHT)) 
+screen = pg.display.set_mode((WINDOW_W, WINDOW_H)) 
 pg.display.set_caption('Bullet hell')
 
 """Functions"""
 def draw():
-    screen.fill(BACKGROUND) # draw Background
+    ui_back = pg.image.load("images/ui/back.png").convert()
+    screen.blit(ui_back, (0, 0))
+    pg.draw.rect(screen, (127,127,127), background)
+
     enemy_group.draw(screen) # draw Enemy
     bullet_group.draw(screen) # draw Bullets
     player_group.draw(screen) # draw Player
@@ -67,8 +71,8 @@ def spawn_player(*players):# Tween character up into view, spawn their orbs and 
         if player.lives<=-1: 
             player.kill()
             continue
-        player.rect.x = randint(64,WIDTH-64)
-        player.rect.y = HEIGHT
+        player.rect.x = randint(64,GAME_W-64)
+        player.rect.y = GAME_H
         player.mobile = False
         player.spawn_frame = randint(64,128)
 
@@ -215,7 +219,7 @@ class Enemy(pg.sprite.Sprite):
 
         if not self.move_timer>1: 
             self.move_timer=randint(128,512)
-            self.followx,self.followy=randint(0,WIDTH-self.rect.w),randint(0,HEIGHT-self.rect.h-(HEIGHT/2))
+            self.followx,self.followy=randint(0,GAME_W-self.rect.w),randint(0,GAME_H-self.rect.h-(GAME_H/2))
 
         else: self.move_timer-=1
 
@@ -264,7 +268,7 @@ class Bullet(pg.sprite.Sprite):
         self.rect = self.image.get_rect(center = self.pos)
         
         if self.rect.bottom < 0: self.kill()
-        if self.rect.top > HEIGHT: self.kill()
+        if self.rect.top > GAME_H: self.kill()
 
 class Orb(pg.sprite.Sprite):
     def __init__(self,owner,offx,offy,weight,color=0):
