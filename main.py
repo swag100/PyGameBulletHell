@@ -3,8 +3,6 @@ from math import degrees, atan2
 from random import randint, uniform
 
 """Declarations"""
-background = pg.Rect((32,16),(384,448)) 
-
 WINDOW_W, WINDOW_H = (640, 480)
 GAME_W, GAME_H, GAME_X, GAME_Y = (384, 448, 32, 16)
 
@@ -14,11 +12,11 @@ clock = pg.time.Clock()
 screen = pg.display.set_mode((WINDOW_W, WINDOW_H)) 
 pg.display.set_caption('Bullet hell')
 
+ui_back = pg.image.load("images/ui/overlay.png").convert_alpha()
+
 """Functions"""
 def draw():
-    ui_back = pg.image.load("images/ui/back.png").convert()
-    screen.blit(ui_back, (0, 0))
-    pg.draw.rect(screen, (127,127,127), background)
+    screen.fill((127,127,127))
 
     enemy_group.draw(screen) # draw Enemy
     bullet_group.draw(screen) # draw Bullets
@@ -28,6 +26,7 @@ def draw():
     #for player in player_group:
     #    if isinstance(player, Player) and player.focus: pg.draw.rect(screen, (0,255,255), player.hitbox) # draw Hitbox when focused
     #for enemy in enemy_group: pg.draw.rect(screen, (0,255,255), enemy.hitbox) # draw Enemy hitboxes (SUPER testing!)
+    screen.blit(ui_back, (0, 0))
     pg.display.flip() # Finally, flip display.
 
 def update():
@@ -111,14 +110,14 @@ class Player(pg.sprite.Sprite):
 
         #Movement
         if self.mobile:
-            self.rect.x += ((right-left)*4)/(self.focus+1)
-            self.rect.y += ((down-up)*4)/(self.focus+1)
+            self.rect.x += (((right and self.rect.right < GAME_W+GAME_X)-(left and self.rect.left > GAME_X))*4)/(self.focus+1)
+            self.rect.y += (((down and self.rect.bottom < GAME_H+GAME_Y)-(up and self.rect.top > GAME_Y))*4)/(self.focus+1)
         else:
             if self.spawn_frame > 0: 
                 self.spawn_frame-=1
                 self.rect.y-=1
             else:
-                self.iframe=120
+                self.iframe=128
                 create_orbs(self,self.orb_data[0],self.orb_data[1],self.orb_data[2],self.orb_data[3])
                 self.mobile = True
 
@@ -184,7 +183,7 @@ class Enemy(pg.sprite.Sprite):
         self.images=spritesheet((64,80),f'images/enemies/{character}/main.png')
         self.image = self.images[0]
         self.rect = self.image.get_rect()
-        self.rect.x,self.rect.y=0,0
+        self.rect.x,self.rect.y=x,y
         self.h0,self.h1,self.h2,self.h3=hitbox[0],hitbox[1],hitbox[2],hitbox[3]
         self.hitbox = pg.Rect(x+self.h0,y+self.h1,self.h2,self.h3)
         
@@ -219,7 +218,7 @@ class Enemy(pg.sprite.Sprite):
 
         if not self.move_timer>1: 
             self.move_timer=randint(128,512)
-            self.followx,self.followy=randint(0,GAME_W-self.rect.w),randint(0,GAME_H-self.rect.h-(GAME_H/2))
+            self.followx,self.followy=randint(0,GAME_W+GAME_X-self.rect.w),randint(0,GAME_H+GAME_Y-self.rect.h-(GAME_H/2))
 
         else: self.move_timer-=1
 
@@ -286,15 +285,19 @@ class Orb(pg.sprite.Sprite):
         self.owner = owner
         self.rect.x,self.rect.y = (owner.rect.x,owner.rect.y+20)
         self.weight = weight
+        self.speed = 1
     def update(self):
         #Rotate image
-        self.angle-=(self.weight/4)%360
+        self.angle-=((self.weight/4)%360)*self.speed
         rot_image = rot_center(self.image_og, self.angle)
         self.image = rot_image
 
         #Follow owner
         self.rect.x+=((self.owner.rect.centerx-(self.rect.w/self.weight))-self.weight-self.rect.x+self.offx)/self.weight
         self.rect.y+=(self.owner.rect.centery-self.rect.y+self.offy)/self.weight
+
+        #Make rotate faster when player focused
+        if self.owner.focus: self.speed = 2
         
         #shoot
         time_now = pg.time.get_ticks()
@@ -343,7 +346,7 @@ player2 = Player("marisa",500,400,3,[2, [(35,0),(-35,0)], [4,4], [1,1]],[pg.K_LE
 player_group.add(player,player2)
 spawn_player(player,player2)
 
-nazrin=Enemy("nazrin",500,100,2000,(16,8,28,60))
+nazrin=Enemy("nazrin",(GAME_W/2)+GAME_X,100,2000,(16,8,28,60))
 enemy_group.add(nazrin)
 
 """Game loop"""
